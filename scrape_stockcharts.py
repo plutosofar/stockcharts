@@ -11,21 +11,24 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import chromedriver_autoinstaller
 
-# 設置日誌紀錄
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+
+# 设置日志记录
 logging.basicConfig(level=logging.INFO)
 
-# 創建忽略 SSL 驗證的上下文
+# 创建忽略 SSL 验证的上下文
 context = ssl.create_default_context()
 context.check_hostname = False
 context.verify_mode = ssl.CERT_NONE
 
-# 設置全局的 SSL 上下文
+# 设置全局的 SSL 上下文
 urllib.request.install_opener(urllib.request.build_opener(urllib.request.HTTPSHandler(context=context)))
 
-# 自動安裝或更新 chromedriver
-#chromedriver_autoinstaller.install()
+# 自动安装或更新 chromedriver
+chromedriver_autoinstaller.install()
 
-# 設置 Chrome WebDriver 的選項
+# 设置 Chrome WebDriver 的选项
 options = Options()
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
@@ -35,11 +38,11 @@ options.add_argument("--test-type")
 # 初始化 Chrome WebDriver
 driver = webdriver.Chrome(options=options)
 
-# 訪問目標網頁
+# 访问目标网页
 url = 'https://stockcharts.com/freecharts/sctr.html'
 driver.get(url)
 
-# 等待頁面加載完成，最大等待時間為 120 秒
+# 等待页面加载完成，最大等待时间为 120 秒
 try:
     logging.info("Waiting for element 'table-responsive' to be visible...")
     element = WebDriverWait(driver, 120).until(
@@ -52,30 +55,44 @@ except TimeoutException as e:
 
 logging.info("Element 'table-responsive' is now visible. Proceeding with data extraction.")
 
-# 獲取頁面內容
+# 获取页面内容
 soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-# 關閉瀏覽器
+# 关闭浏览器
 driver.quit()
 
-# 找到包含數據的表格
+# 找到包含数据的表格
 table = soup.find('table', {'class': 'table table-striped table-bordered table-hover nowrap dataTable no-footer'})
 if table:
-    # 解析表格中的前10行數據
+    # 解析表格中的数据
     headers = [header.text for header in table.find_all('th')]
-    rows = table.find_all('tr')[1:500]  # 只提取前10行數據
+    logging.info(f"Headers found: {headers}")
+
+    rows = table.find_all('tr')[1:]  # 提取所有行数据
     data = []
     for row in rows:
         cells = row.find_all('td')
-        # 提取 SYMBOL 和 SCTR 列的數據
-        symbol = cells[1].text.strip()
-        sctr = cells[5].text.strip()
-        data.append([symbol, sctr])
+        if len(cells) > 5:  # 确保行中有足够的列
+            symbol = cells[1].text.strip()
+            sctr = cells[5].text.strip()
+            #logging.info(f"Processing row - SYMBOL: {symbol}, SCTR: {sctr}")
+            try:
+                sctr_value = float(sctr)
+                if sctr_value >= 60:  # 只选择 SCTR 大于 60 的记录
+                    data.append([symbol, sctr_value])
+            except ValueError:
+                logging.warning(f"Skipping row with invalid SCTR value: {sctr}")
 
-    # 創建 DataFrame
+    # 创建 DataFrame
     df = pd.DataFrame(data, columns=['SYMBOL', 'SCTR'])
 
-    # 將數據打印到終端
+    # 检查是否有数据被提取出来
+    if not df.empty:
+        logging.info("Data extracted successfully")
+    else:
+        logging.warning("No data extracted that meets the criteria")
+
+    # 输出所有符合条件的数据
     print(df)
 else:
     logging.error("Table not found")
