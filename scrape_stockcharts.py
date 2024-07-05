@@ -92,9 +92,9 @@ if table:
     if not df.empty:
         logging.info("Data extracted successfully")
 
-        # 使用yfinance获取RSI数据
-        logging.info("Fetching RSI data for selected symbols...")
-        rsi_data = []
+        # 使用yfinance获取数据并计算AO、RSI和MACD
+        logging.info("Fetching AO, RSI, and MACD data for selected symbols...")
+        ao_rsi_macd_data = []
         for symbol in df['SYMBOL']:
             try:
                 # 计算日期范围：当前日期前60天
@@ -104,6 +104,9 @@ if table:
                 # 下载股票历史数据
                 stock_data = yf.download(symbol, start=start_date, end=end_date)
                 
+                # 计算AO（Accumulation/Distribution Oscillator）
+                ao = stock_data['Close'].rolling(window=5).mean() - stock_data['Close'].rolling(window=34).mean()
+                
                 # 计算30日RSI
                 delta = stock_data['Close'].diff()
                 gain = (delta.where(delta > 0, 0)).rolling(window=30).mean()
@@ -111,20 +114,34 @@ if table:
                 rs = gain / loss
                 rsi = 100 - (100 / (1 + rs))
                 
-                # 获取最新的RSI值
-                latest_rsi = rsi.iloc[-1]
+                # 计算MACD及其信号线
+                exp1 = stock_data['Close'].ewm(span=12, adjust=False).mean()
+                exp2 = stock_data['Close'].ewm(span=26, adjust=False).mean()
+                macd = exp1 - exp2
+                signal = macd.ewm(span=9, adjust=False).mean()
                 
-                # 筛选条件：RSI小于60
-                if latest_rsi < 60:
-                    rsi_data.append([symbol, latest_rsi])
+                # 计算MACD的柱状图
+                macd_histogram = macd - signal
+                
+                # 获取最新的AO、RSI和MACD值
+                latest_ao = ao.iloc[-1]
+                latest_rsi = rsi.iloc[-1]
+                latest_macd = macd.iloc[-1]
+                latest_signal = signal.iloc[-1]
+                
+                # 筛选条件：AO最新一日大于昨日，昨日大于前日；RSI小于60；MACD金叉；MACD柱状图递增
+                if (ao.iloc[-1] > ao.iloc[-2]) and (ao.iloc[-2] > ao.iloc[-3]) \
+                   and (latest_rsi < 60) and (latest_macd > latest_signal) \
+                   and (macd_histogram.iloc[-1] > macd_histogram.iloc[-2]):
+                    ao_rsi_macd_data.append([symbol, latest_ao, latest_rsi, latest_macd, latest_signal])
             except Exception as e:
-                logging.warning(f"Failed to fetch RSI for {symbol}: {e}")
+                logging.warning(f"Failed to fetch AO, RSI, and MACD for {symbol}: {e}")
 
-        # 创建RSI数据的DataFrame
-        rsi_df = pd.DataFrame(rsi_data, columns=['SYMBOL', 'RSI'])
+        # 创建AO、RSI和MACD数据的DataFrame
+        ao_rsi_macd_df = pd.DataFrame(ao_rsi_macd_data, columns=['SYMBOL', 'AO', 'RSI', 'MACD', 'Signal'])
         
         # 合并符合条件的数据
-        final_data = pd.merge(df, rsi_df, on='SYMBOL')
+        final_data = pd.merge(df, ao_rsi_macd_df, on='SYMBOL')
         
         # 输出最终符合条件的数据
         print(final_data)
