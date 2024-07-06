@@ -129,9 +129,10 @@ if table:
                 latest_macd = macd.iloc[-1]
                 latest_signal = signal.iloc[-1]
                 
-                # 筛选条件：AO最新一日大于昨日，昨日大于前日；RSI小于60；MACD金叉；MACD柱状图递增
+                # 筛选条件：AO最新一日大于昨日，昨日大于前日；RSI小于60；MACD金叉且在零线下；MACD柱状图递增
                 if (ao.iloc[-1] > ao.iloc[-2]) and (ao.iloc[-2] > ao.iloc[-3]) \
                    and (latest_rsi < 60) and (latest_macd > latest_signal) \
+                   and (macd.iloc[-2] < signal.iloc[-2]) and (macd.iloc[-1] > signal.iloc[-1]) \
                    and (macd_histogram.iloc[-1] > macd_histogram.iloc[-2]):
                     ao_rsi_macd_data.append([symbol, latest_ao, latest_rsi, latest_macd, latest_signal])
             except Exception as e:
