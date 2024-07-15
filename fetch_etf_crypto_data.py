@@ -14,7 +14,7 @@ symbols = [
 us_eastern = pytz.timezone('US/Eastern')
 
 # Define the date ranges for changes
-today = datetime.now(us_eastern)
+today = datetime.now(us_eastern).date()
 one_week_ago = today - timedelta(days=7)
 one_month_ago = today - timedelta(days=30)
 one_year_ago = today - timedelta(days=365)
@@ -27,8 +27,8 @@ def calculate_change(current, previous):
 
 # Function to find the closest available date
 def get_closest_date(hist, target_date):
-    date_list = hist.index
-    closest_date = date_list.asof(target_date)
+    dates = hist.index
+    closest_date = min(dates, key=lambda x: abs(x - target_date))
     return closest_date
 
 # DataFrame to store the data
@@ -42,8 +42,11 @@ for symbol in symbols:
         if hist.empty:
             raise ValueError("No historical data available")
         
+        # Convert index to date format
+        hist.index = hist.index.date
+        
         # Full name
-        full_name = ticker.info.get('longName', 'N/A')
+        full_name = ticker.info.get('longName', ticker.info.get('name', 'N/A'))
         
         # Current price
         current_price = hist['Close'].iloc[-1]
@@ -55,16 +58,16 @@ for symbol in symbols:
         today_change = calculate_change(hist['Close'].iloc[-1], hist['Close'].iloc[-2])
         
         # Week change
-        closest_week_date = get_closest_date(hist, one_week_ago)
-        week_change = calculate_change(hist['Close'].iloc[-1], hist['Close'].loc[closest_week_date])
+        week_date = get_closest_date(hist, one_week_ago)
+        week_change = calculate_change(hist['Close'].iloc[-1], hist.loc[week_date]['Close'])
         
         # Month change
-        closest_month_date = get_closest_date(hist, one_month_ago)
-        month_change = calculate_change(hist['Close'].iloc[-1], hist['Close'].loc[closest_month_date])
+        month_date = get_closest_date(hist, one_month_ago)
+        month_change = calculate_change(hist['Close'].iloc[-1], hist.loc[month_date]['Close'])
         
         # Year change
-        closest_year_date = get_closest_date(hist, one_year_ago)
-        year_change = calculate_change(hist['Close'].iloc[-1], hist['Close'].loc[closest_year_date])
+        year_date = get_closest_date(hist, one_year_ago)
+        year_change = calculate_change(hist['Close'].iloc[-1], hist.loc[year_date]['Close'])
         
         data.append([symbol, full_name, current_price, volume, today_change, week_change, month_change, year_change])
     
