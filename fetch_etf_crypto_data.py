@@ -7,7 +7,7 @@ import pytz
 symbols = [
     'XLE', 'XLF', 'XLU', 'XLI', 'GDX', 'XLK', 'XLV', 'XLY', 'XLP', 'XLB', 'XOP', 'IYR',
     'XHB', 'ITB', 'VNQ', 'GDXJ', 'IYE', 'OIH', 'XME', 'XRT', 'SMH', 'IBB', 'KBE', 'KRE',
-    'XTL', 'ARKK', 'BTC-USD', 'ETH-USD'
+    'XTL', 'ARKK', 'GLD', 'IWM','BTC-USD', 'ETH-USD'
 ]
 
 # Define the US Eastern Time (ET) timezone
