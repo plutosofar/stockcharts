@@ -12,7 +12,7 @@ import pandas as pd
 import chromedriver_autoinstaller
 import yfinance as yf
 from datetime import datetime, timedelta
-
+import requests
 # Set display options
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -168,6 +168,18 @@ if table:
             output_file = f"/Users/leesiufung/Documents/python_stock_env/filtered_stock_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
             final_data.to_csv(output_file, index=False, sep='\t')
             logging.info(f"Data exported to {output_file}")
+
+            #send the line message to me
+
+            url = 'https://notify-api.line.me/api/notify'
+            token = '剛剛複製的權杖'
+            headers = {
+                    'Authorization': 'Bearer ' + 'OVc6X7lKaLNftWUd2Fel8Z0RXAhafijdsHnrxa3E2m6'    # 設定權杖
+            }
+            data = {
+            'message':f"Stock list for {datetime.now().strftime('%Y%m%d_%H%M%S')}\n {final_data}"     # 設定要發送的訊息
+            }
+            data = requests.post(url, headers=headers, data=data)   # 使用 POST 方法
         else:
             logging.warning("No data meets the final filtering criteria")
     else:
